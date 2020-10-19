@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Speech Regeneration</title>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+        <script src="jquery-3.5.js"></script>
+    </head>
+    <body>
+<div class="container">
+    <div id="text1">High Fidelity Speech Regeneration <br> with Application to Speech Enhancement</div>
+    <div id="intro">
+        <p>
+            Adam Polyak, Lior Wolf, Yossi Adi, Ori Kabeli, Yaniv Taigman
+        </p>
+        <p>
+        </p>
+    </div>
+</div>
+        <div class="content-container">
+            <img src="fig.png" style="width:70%">
+            <p>
+                Speech enhancement has seen great improvement in recent years mainly through contributions in denoising, speaker separation, and dereverberation methods that mostly deal with environmental effects on vocal audio. 
+                To enhance speech beyond the limitations of the original signal, we take a regeneration approach, in which we recreate the speech from its essence, including the semi-recognized speech, prosody features, and identity. 
+                We propose a wav-to-wav generative model for speech that can generate 24khz speech in a real-time manner and which utilizes a compact speech representation, composed of ASR and identity features, to achieve a higher level of intelligibility. 
+                Inspired by voice conversion methods, we train to augment the speech characteristics while preserving the identity of the source using an auxiliary identity network. 
+                Perceptual acoustic metrics and subjective tests show that the method obtains valuable improvements over recent baselines.
+            </p>
+        </div>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+<div class="content-container">
+    <script src="wavesurfer.js"></script>
+    <div class="content-title">Example</div>
+    <div class="option-div">
+        <p>Original input:</p>
+        <div id="input_header_waveform"></div>
+        <button id="input_header" class="play-button-demo btn btn-primary" onclick="wavesurfer.playPause()">
+            <i class="fa fa-play"></i>
+            Play
+            /
+            <i class="fa fa-pause"></i>
+            Pause
+        </button>
+    </div>
+    <div class="option-div">
+        <p>Regenerated result:</p>
+        <div id="header_waveform"></div>
+        <button id="header" class="play-button-demo btn btn-primary" onclick="wavesurfer_2.playPause()">
+            <i class="fa fa-play"></i>
+            Play
+            /
+            <i class="fa fa-pause"></i>
+            Pause
+        </button>
+    </div>
+
+    <script>
+        var wavesurfer = WaveSurfer.create({
+                    container: '#input_header_waveform',
+                    waveColor: 'violet',
+                    progressColor: 'purple'
+                });
+        wavesurfer.load('./audio/yanif2.wav');
+        var wavesurfer_2 = WaveSurfer.create({
+                    container: '#header_waveform',
+                    waveColor: 'violet',
+                    progressColor: 'purple'
+                });
+        wavesurfer_2.load('./audio/yanif2_gen.wav');
+    </script>
+</div>
+<div class="content-container">
+    <div class="content-title">DAPS</div>
+    <div id='descript'>
+    </div>
+    <div id='legend'>
+        <ul style="list-style-type:circle">
+        </ul>    
+    </div>
+    <div class="option-div">
+    <label for="speaker">Choose a speaker:</label>
+    <select id="speaker" onchange=record(this)>
+        <option value=f10>f10</option>
+        <option value=m10>m10</option>
+    </select></div>
+    <div class="option-div" id="src-env-div"> 
+        <label for="src-env">Choose a source environment:</label>
+        <select id="src-env" onchange=record(this)>
+            <option value="ipad_livingroom1">IPad Livingroom1</option>
+            <option value="ipad_balcony1">IPad Balcony</option>
+            <option value="ipad_bedroom1">IPad Bedroom</option>
+            <option value="ipad_confroom1">IPad Confroom1</option>
+            <option value="ipad_confroom2">IPad Confroom2</option>
+            <option value="ipad_office1">IPad Office1</option>
+            <option value="ipad_office2">IPad Office2</option>
+            <option value="ipadflat_confroom1">IPadflat Confroom1</option>
+            <option value="ipadflat_office1">IPadflat Office1</option>
+            <option value="iphone_livingroom1">IPhone Livingroom1</option>
+            <option value="iphone_balcony1">IPhone Balcony1</option>
+            <option value="iphone_bedroom1">IPhone Bedroom1</option>
+            <option value="all">All</option>
+        </select>
+    </div>
+    <div id="result-div"></div>
+    </div>
+    <div id="loading-status">Loading......</div>   
+    <script>
+        var mode = 0;
+        var audio;
+        function play(file_name) {
+            if (audio) {
+                audio.pause();
+            }
+            audio = new Audio(file_name) ;
+            audio.play();
+            //document.getElementById("status").innerHTML = file_name;
+        }
+        function switchMode() {
+            if (document.getElementById("myonoffswitch").checked) {
+                mode = 0;
+            }
+            else {
+                mode = 1;
+            }
+        }
+    </script>
+    <script>
+        /* Highlights the navigation bar button corresponding to page
+        to indicate which page a user is currently viewing.
+        */
+        var env_pairs="DAPS";
+        var speaker="f10";
+        var src_env="ipad_livingroom1";
+
+        var id_to_env = [
+            "ipad_balcony1",
+            "ipad_bedroom1",
+            "ipad_confroom1",
+            "ipad_confroom2",
+            "ipad_livingroom1",
+            "ipad_office1",
+            "ipad_office2",
+            "ipadflat_confroom1",
+            "ipadflat_office1",
+            "iphone_balcony1",
+            "iphone_bedroom1",
+            "iphone_livingroom1",
+        ];
+
+        var env_to_id = {
+            "ipad_balcony1":0,
+            "ipad_bedroom1":1,
+            "ipad_confroom1":2,
+            "ipad_confroom2":3,
+            "ipad_livingroom1":4,
+            "ipad_office1":5,
+            "ipad_office2":6,
+            "ipadflat_confroom1":7,
+            "ipadflat_office1":8,
+            "iphone_balcony1":9,
+            "iphone_bedroom1":10,
+            "iphone_livingroom1":11,
+        };
+
+        var methods = [
+            "Noisy",
+            "Denoised",
+            "Ours",
+            "Clean",
+        ];
+
+        function lock(){
+            $('#speaker').attr('disabled', 'disabled');
+            $('#env-pairs').attr('disabled', 'disabled');
+            $('#src-env').attr('disabled', 'disabled');
+            $('#loading-status').show();
+        }
+        function unlock(){
+            $('#speaker').removeAttr('disabled');
+            $('#env-pairs').removeAttr('disabled');
+            $('#src-env').removeAttr('disabled');
+            $('#loading-status').hide();
+        }
+
+        function preload(speaker, env_pairs, src_env, push){
+            lock();
+            $('#env-pairs').val(env_pairs);
+            // $('#speaker').load("choices_voice.php?choice=" + env_pairs, function(){
+            //     $('#speaker').val(speaker);
+            // });
+            // $("#src-env").load("choices.php?choice=" + env_pairs +"&speaker="+speaker, function(){
+            //     $("#src-env").val(src_env);
+            // });
+            $("#result-div").empty();
+            $("#result-div").append(createTable());
+            unlock();
+        }
+
+        preload(speaker, env_pairs, src_env, true);
+
+        function createTable() {
+            var tableElem, rowElem, colElem;
+
+            tableElem = document.createElement('table');
+            headline = document.createElement('tr');
+
+            colElem = document.createElement('td');
+            colElem.appendChild(document.createTextNode('ID'));
+            colElem.style.color = 'rgb(22, 38, 67)';
+            colElem.style.center = true;
+            headline.appendChild(colElem);
+
+            colElem = document.createElement('td');
+            colElem.appendChild(document.createTextNode('SRC ENV'));
+            colElem.style.color = 'rgb(22, 38, 67)';
+            colElem.style.center = true;
+            headline.appendChild(colElem);
+
+            for (var ii = 0; ii < methods.length; ii++) {
+                colElem = document.createElement('td');
+                colElem.appendChild(document.createTextNode(methods[ii]));
+                colElem.style.color = 'rgb(22, 38, 67)';
+                colElem.style.center = true;
+                headline.appendChild(colElem);
+            }
+
+            tableElem.appendChild(headline);
+
+            src_env = $("#src-env").val();
+            envs = [];
+            if (src_env == 'all') {
+                envs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+            } else {
+                envs = [env_to_id[src_env]];
+            }
+
+            var bg_color='white';
+            var txt_color='rgb(22, 38, 67)';
+
+            for (var i = 0; i < envs.length; i++) {
+                if (speaker == 'f10') {
+                    N = 26;
+                } else {
+                    N = 28;
+                }
+
+                for (var j = 0; j < N; j++) {
+                    rowElem = document.createElement('tr');
+                    rowElem.style.backgroundColor = bg_color;
+                    
+                    colElem = document.createElement('td');
+                    colElem.appendChild(document.createTextNode(envs[i].toString().padStart(2, "0") + '-' + j.toString().padStart(2, "0")));
+                    colElem.style.color = txt_color;
+                    colElem.style.center = true;
+                    rowElem.appendChild(colElem);
+
+                    colElem = document.createElement('td');
+                    colElem.appendChild(document.createTextNode(id_to_env[envs[i]]));
+                    colElem.style.color = txt_color;
+                    colElem.style.center = true;
+                    rowElem.appendChild(colElem);
+                    
+                    for (var ii = 0; ii < methods.length; ii++) {
+                        colElem = document.createElement('td');
+                        var x = document.createElement("input");
+                        x.setAttribute("type", "button");
+                        x.setAttribute("value", "PLAY");
+                        x.setAttribute("onclick", "play('https://dl.noahmt.com/hifi/audio/DAPS/" + methods[ii] + "/" + speaker + "_" + envs[i].toString().padStart(2, "0") + "-" + j.toString().padStart(2, "0") + ".mp3')");
+                        colElem.appendChild(x);
+                        colElem.style.color = txt_color;
+                        colElem.style.center = true;
+                        rowElem.appendChild(colElem);
+                    }
+
+                    tableElem.appendChild(rowElem);
+                }
+                
+                flip = bg_color
+                bg_color = txt_color;
+                txt_color = flip;
+            }
+
+            return tableElem;
+        }
+
+        function fetch_result(){
+            $(window).ready(function() {
+                speaker=$("#speaker").val();
+                env_pairs=$("#env-pairs").val();
+                src_env=$("#src-env").val();
+                $("#result-div").empty();
+                $("#result-div").append(createTable());
+                unlock();
+            });
+        }
+
+        function record(sel) {
+            lock();
+            fetch_result();
+        }
+
+        window.addEventListener('popstate', function(e) {
+            preload(e.state["speaker"], e.state["env-pairs"], e.state["src-env"], false);
+        });
+    </script>
+</div>
+<div class="content-container">
+    Sample paged based on <a style="color:rgb(22, 38, 67)"  href="https://daps.cs.princeton.edu/projects/HiFi-GAN/index.php"> HiFi-GAN</a> page.  
+</div>
+</body>
+</html>
